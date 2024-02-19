@@ -31,7 +31,7 @@ import api from './api.js'
 import axios from '@nextcloud/axios'
 import { generateOcsUrl } from '@nextcloud/router'
 import { getCapabilities } from '@nextcloud/capabilities'
-import logger from '../logger.js'
+import logger from '../logger.ts'
 import { parseFileSize } from "@nextcloud/files"
 
 const orderGroups = function(groups, orderBy) {

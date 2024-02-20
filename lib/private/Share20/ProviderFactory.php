@@ -96,17 +96,7 @@ class ProviderFactory implements IProviderFactory {
 	 */
 	protected function defaultShareProvider() {
 		if ($this->defaultProvider === null) {
-			$this->defaultProvider = new DefaultShareProvider(
-				$this->serverContainer->getDatabaseConnection(),
-				$this->serverContainer->getUserManager(),
-				$this->serverContainer->getGroupManager(),
-				$this->serverContainer->getLazyRootFolder(),
-				$this->serverContainer->getMailer(),
-				$this->serverContainer->query(Defaults::class),
-				$this->serverContainer->getL10NFactory(),
-				$this->serverContainer->getURLGenerator(),
-				$this->serverContainer->query(ITimeFactory::class),
-			);
+			$this->defaultProvider = $this->serverContainer->get(DefaultShareProvider::class);
 		}
 
 		return $this->defaultProvider;

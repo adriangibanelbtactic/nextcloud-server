@@ -45,4 +45,6 @@ function renderDeclarativeSettingsSections(forms: Array<DeclarativeForm>): void 
 	}
 }
 
-renderDeclarativeSettingsSections(forms);
+document.addEventListener('DOMContentLoaded', () => {
+	renderDeclarativeSettingsSections(forms);
+});

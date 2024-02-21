@@ -79,7 +79,7 @@ class DeclarativeSettingsController extends OCSController {
 		} catch (NotAdminException $e) {
 			throw $e;
 		} catch (Exception $e) {
-			$this->logger->error("Failed to set declarative settings value: " . $e->getMessage());
+			$this->logger->error('Failed to set declarative settings value: ' . $e->getMessage());
 			throw new OCSBadRequestException();
 		}
 	}

@@ -26,12 +26,10 @@
  */
 namespace OCA\Settings\Controller;
 
-use OC\AppFramework\Bootstrap\Coordinator;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
-use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Group\ISubAdmin;
 use OCP\IGroupManager;
 use OCP\INavigationManager;
@@ -53,9 +51,7 @@ class PersonalSettingsController extends Controller {
 		IUserSession $userSession,
 		IGroupManager $groupManager,
 		ISubAdmin $subAdmin,
-		Coordinator $coordinator,
 		IDeclarativeManager $declarativeSettingsManager,
-		IEventDispatcher $eventDispatcher,
 		IInitialState $initialState,
 	) {
 		parent::__construct($appName, $request);

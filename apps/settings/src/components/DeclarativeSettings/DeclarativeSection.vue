@@ -7,9 +7,9 @@
 		<div v-for="formField in formFields"
 			 :key="formField.id"
 			 class="declarative-form-field"
-			:aria-label="t('settings', '{app} declarative setting field: {name}', { app: formApp, name: t(formApp, formField.title) })"
+			:aria-label="t('settings', '{app}\'s declarative setting field: {name}', { app: formApp, name: t(formApp, formField.title) })"
 			:class="{
-				'declarative-form-field-text': isTextFormFields(formField),
+				'declarative-form-field-text': isTextFormField(formField),
 				'declarative-form-field-select': formField.type === 'select',
 				'declarative-form-field-multi-select': formField.type === 'multi-select',
 				'declarative-form-field-checkbox': formField.type === 'checkbox',
@@ -17,7 +17,7 @@
 				'declarative-form-field-radio': formField.type === 'radio'
 			}">
 
-			<template v-if="isTextFormFields(formField)">
+			<template v-if="isTextFormField(formField)">
 				<div class="input-wrapper">
 					<NcInputField
 						:type="formField.type"
@@ -152,14 +152,12 @@ export default {
 		formFields() {
 			return this.form.fields || []
 		},
-		isTextFormFields() {
-			return (formField) => ['text', 'password', 'email', 'tel', 'url', 'search', 'number'].includes(formField.type)
-		},
 	},
 	methods: {
 		initFormFieldsData() {
 			this.form.fields.forEach((formField) => {
 				if (formField.type === 'checkbox') {
+					// convert bool to number using unary plus (+) operator
 					this.$set(formField, 'value', +formField.value)
 				}
 				if (formField.type === 'multi-checkbox') {
@@ -209,7 +207,7 @@ export default {
 
 		updateDeclarativeSettingsValue(formField, value = null) {
 			try {
-				return axios.post(generateOcsUrl('settings/api/declarative'), {
+				return axios.post(generateOcsUrl('settings/api/declarative/value'), {
 					app: this.formApp,
 					formId: this.form.id.replace(this.formApp + '_', ''), // Remove app prefix to send clean form id
 					fieldId: formField.id,
@@ -224,6 +222,10 @@ export default {
 		onChangeDebounced: debounce(function(formField) {
 			this.updateDeclarativeSettingsValue(formField)
 		}, 1000),
+
+		isTextFormField(formField) {
+			return ['text', 'password', 'email', 'tel', 'url', 'number'].includes(formField.type)
+		},
 	},
 }
 </script>

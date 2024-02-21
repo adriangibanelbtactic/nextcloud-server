@@ -27,6 +27,7 @@ use Exception;
 use OC\AppFramework\Bootstrap\Coordinator;
 use OC\AppFramework\Middleware\Security\Exceptions\NotAdminException;
 use OCP\EventDispatcher\IEventDispatcher;
+use OCP\IAppConfig;
 use OCP\IConfig;
 use OCP\IGroupManager;
 use OCP\IUser;
@@ -48,11 +49,12 @@ use Psr\Log\LoggerInterface;
  */
 class DeclarativeManager implements IDeclarativeManager {
 	public function __construct(
-		private IEventDispatcher $eventDispatcher,
-		private IGroupManager $groupManager,
-		private Coordinator $coordinator,
-		private IConfig $config,
-		private LoggerInterface $logger,
+		private readonly IEventDispatcher $eventDispatcher,
+		private readonly IGroupManager    $groupManager,
+		private readonly Coordinator      $coordinator,
+		private readonly IConfig          $config,
+		private readonly IAppConfig       $appConfig,
+		private readonly LoggerInterface  $logger,
 	) {
 	}
 
@@ -271,7 +273,7 @@ class DeclarativeManager implements IDeclarativeManager {
 		$sectionType = $this->getSectionType($app, $fieldId);
 		switch ($sectionType) {
 			case DeclarativeSettingsTypes::SECTION_TYPE_ADMIN:
-				$this->config->setAppValue($app, $fieldId, $value);
+				$this->appConfig->setValueString($app, $fieldId, $value);
 				break;
 			case DeclarativeSettingsTypes::SECTION_TYPE_PERSONAL:
 				$this->config->setUserValue($user->getUID(), $app, $fieldId, $value);
@@ -378,15 +380,6 @@ class DeclarativeManager implements IDeclarativeManager {
 			}
 			if (!is_array($field['options'])) {
 				$this->logger->warning('Declarative settings: field options should be an array', ['app' => $appId, 'form_id' => $formId, 'field_id' => $fieldId]);
-				return false;
-			}
-		}
-		if (!in_array($field['type'], [
-			DeclarativeSettingsTypes::MULTI_CHECKBOX, DeclarativeSettingsTypes::RADIO,
-			DeclarativeSettingsTypes::SELECT, DeclarativeSettingsTypes::CHECKBOX,
-		])) {
-			if (!isset($field['placeholder'])) {
-				$this->logger->warning('Declarative settings: missing field placeholder', ['app' => $appId, 'form_id' => $formId, 'field_id' => $fieldId]);
 				return false;
 			}
 		}

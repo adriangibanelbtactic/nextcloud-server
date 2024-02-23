@@ -460,7 +460,7 @@ class EmptyContentSecurityPolicy {
 		$policy .= "base-uri 'none';";
 		$policy .= "manifest-src 'self';";
 
-		if (!empty($this->allowedScriptDomains) || $this->evalScriptAllowed || $this->evalWasmAllowed) {
+		if (!empty($this->allowedScriptDomains) || $this->evalScriptAllowed || $this->evalWasmAllowed || is_string($this->jsNonce)) {
 			$policy .= 'script-src ';
 			$scriptSrc = '';
 			if (is_string($this->jsNonce)) {

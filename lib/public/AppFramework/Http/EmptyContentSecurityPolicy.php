@@ -37,8 +37,8 @@ namespace OCP\AppFramework\Http;
  * @since 9.0.0
  */
 class EmptyContentSecurityPolicy {
-	/** @var string JS nonce to be used */
-	protected $jsNonce = null;
+	/** @var ?string JS nonce to be used */
+	protected ?string $jsNonce = null;
 	/** @var bool Whether strict-dynamic should be used */
 	protected $strictDynamicAllowed = null;
 	/** @var bool Whether strict-dynamic should be used on script-src-elem */

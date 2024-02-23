@@ -88,9 +88,9 @@ class CacheDatabase {
 
 	private function queryByFileIdInShard(int $fileId, int $shard): ?CacheEntry {
 		$query = $this->queryForShard($shard)->selectFileCache();
-		$query->andWhere($query->expr()->eq('fileid', $query->createNamedParameter($fileId, IQueryBuilder::PARAM_INT)));
+		$query->andWhere($query->expr()->eq('filecache.fileid', $query->createNamedParameter($fileId, IQueryBuilder::PARAM_INT)));
 
-		$row = $query->executeQuery()->fetchOne();
+		$row = $query->executeQuery()->fetch();
 		return $row ? new CacheEntry($row) : null;
 	}
 

@@ -26,8 +26,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>
  *
  */
+
 namespace OC\Files\Config;
 
+use OC\Files\Cache\CacheDatabase;
 use OCP\Cache\CappedMemoryCache;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Diagnostics\IEventLogger;
@@ -44,37 +46,31 @@ use Psr\Log\LoggerInterface;
  * Cache mounts points per user in the cache so we can easily look them up
  */
 class UserMountCache implements IUserMountCache {
-	private IDBConnection $connection;
-	private IUserManager $userManager;
-
 	/**
 	 * Cached mount info.
+	 *
 	 * @var CappedMemoryCache<ICachedMountInfo[]>
 	 **/
 	private CappedMemoryCache $mountsForUsers;
 	/**
 	 * fileid => internal path mapping for cached mount info.
+	 *
 	 * @var CappedMemoryCache<string>
 	 **/
 	private CappedMemoryCache $internalPathCache;
-	private LoggerInterface $logger;
 	/** @var CappedMemoryCache<array> */
 	private CappedMemoryCache $cacheInfoCache;
-	private IEventLogger $eventLogger;
 
 	/**
 	 * UserMountCache constructor.
 	 */
 	public function __construct(
-		IDBConnection $connection,
-		IUserManager $userManager,
-		LoggerInterface $logger,
-		IEventLogger $eventLogger
+		private IDBConnection   $connection,
+		private IUserManager    $userManager,
+		private LoggerInterface $logger,
+		private IEventLogger    $eventLogger,
+		private CacheDatabase   $cacheDatabase,
 	) {
-		$this->connection = $connection;
-		$this->userManager = $userManager;
-		$this->logger = $logger;
-		$this->eventLogger = $eventLogger;
 		$this->cacheInfoCache = new CappedMemoryCache();
 		$this->internalPathCache = new CappedMemoryCache();
 		$this->mountsForUsers = new CappedMemoryCache();
@@ -281,7 +277,7 @@ class UserMountCache implements IUserMountCache {
 		if ($cached !== null) {
 			return $cached;
 		}
-		$builder = $this->connection->getQueryBuilder();
+		$builder = $this->cacheDatabase->queryForStorageId($info->getStorageId());
 		$query = $builder->select('path')
 			->from('filecache')
 			->where($builder->expr()->eq('fileid', $builder->createPositionalParameter($info->getRootId())));
@@ -295,9 +291,8 @@ class UserMountCache implements IUserMountCache {
 	 */
 	public function getMountsForStorageId($numericStorageId, $user = null) {
 		$builder = $this->connection->getQueryBuilder();
-		$query = $builder->select('storage_id', 'root_id', 'user_id', 'mount_point', 'mount_id', 'f.path', 'mount_provider_class')
+		$query = $builder->select('storage_id', 'root_id', 'user_id', 'mount_point', 'mount_id', 'mount_provider_class')
 			->from('mounts', 'm')
-			->innerJoin('m', 'filecache', 'f', $builder->expr()->eq('m.root_id', 'f.fileid'))
 			->where($builder->expr()->eq('storage_id', $builder->createPositionalParameter($numericStorageId, IQueryBuilder::PARAM_INT)));
 
 		if ($user) {
@@ -308,7 +303,9 @@ class UserMountCache implements IUserMountCache {
 		$rows = $result->fetchAll();
 		$result->closeCursor();
 
-		return array_filter(array_map([$this, 'dbRowToMountInfo'], $rows));
+		return array_filter(array_map(function (array $row) {
+			return $this->dbRowToMountInfo($row, [$this, 'getInternalPathForMountInfo']);
+		}, $rows));
 	}
 
 	/**
@@ -317,16 +314,17 @@ class UserMountCache implements IUserMountCache {
 	 */
 	public function getMountsForRootId($rootFileId) {
 		$builder = $this->connection->getQueryBuilder();
-		$query = $builder->select('storage_id', 'root_id', 'user_id', 'mount_point', 'mount_id', 'f.path', 'mount_provider_class')
+		$query = $builder->select('storage_id', 'root_id', 'user_id', 'mount_point', 'mount_id', 'mount_provider_class')
 			->from('mounts', 'm')
-			->innerJoin('m', 'filecache', 'f', $builder->expr()->eq('m.root_id', 'f.fileid'))
 			->where($builder->expr()->eq('root_id', $builder->createPositionalParameter($rootFileId, IQueryBuilder::PARAM_INT)));
 
 		$result = $query->execute();
 		$rows = $result->fetchAll();
 		$result->closeCursor();
 
-		return array_filter(array_map([$this, 'dbRowToMountInfo'], $rows));
+		return array_filter(array_map(function (array $row) {
+			return $this->dbRowToMountInfo($row, [$this, 'getInternalPathForMountInfo']);
+		}, $rows));
 	}
 
 	/**
@@ -349,7 +347,7 @@ class UserMountCache implements IUserMountCache {
 				$this->cacheInfoCache[$fileId] = [
 					(int)$row['storage'],
 					(string)$row['path'],
-					(int)$row['mimetype']
+					(int)$row['mimetype'],
 				];
 			} else {
 				throw new NotFoundException('File with id "' . $fileId . '" not found');
@@ -366,15 +364,15 @@ class UserMountCache implements IUserMountCache {
 	 */
 	public function getMountsForFileId($fileId, $user = null) {
 		try {
-			[$storageId, $internalPath] = $this->getCacheInfoFromFileId($fileId);
+			$cacheEntry = $this->cacheDatabase->getByFileId($fileId);
+			$internalPath = $cacheEntry->getPath();
 		} catch (NotFoundException $e) {
 			return [];
 		}
 		$builder = $this->connection->getQueryBuilder();
-		$query = $builder->select('storage_id', 'root_id', 'user_id', 'mount_point', 'mount_id', 'f.path', 'mount_provider_class')
+		$query = $builder->select('storage_id', 'root_id', 'user_id', 'mount_point', 'mount_id', 'mount_provider_class')
 			->from('mounts', 'm')
-			->innerJoin('m', 'filecache', 'f', $builder->expr()->eq('m.root_id', 'f.fileid'))
-			->where($builder->expr()->eq('storage_id', $builder->createPositionalParameter($storageId, IQueryBuilder::PARAM_INT)));
+			->where($builder->expr()->eq('storage_id', $builder->createPositionalParameter($cacheEntry->getStorageId(), IQueryBuilder::PARAM_INT)));
 
 		if ($user) {
 			$query->andWhere($builder->expr()->eq('user_id', $builder->createPositionalParameter($user)));
@@ -383,6 +381,17 @@ class UserMountCache implements IUserMountCache {
 		$result = $query->execute();
 		$rows = $result->fetchAll();
 		$result->closeCursor();
+
+		$fileIds = array_map(fn (array $row) => $row['root_id'], $rows);
+		$files = $this->cacheDatabase->getByFileIds($fileIds);
+
+		foreach ($rows as &$row) {
+			$mountFileId = $row['root_id'];
+			if (isset($files[$mountFileId])) {
+				$row['path'] = $files[$mountFileId]->getPath();
+			}
+		}
+
 		// filter mounts that are from the same storage but a different directory
 		$filteredMounts = array_filter($rows, function (array $row) use ($internalPath, $fileId) {
 			if ($fileId === (int)$row['root_id']) {
@@ -456,13 +465,8 @@ class UserMountCache implements IUserMountCache {
 			return $user->getUID();
 		}, $users);
 
-		$query = $builder->select('m.user_id', 'f.size')
+		$query = $builder->select('m.user_id', 'storage_id')
 			->from('mounts', 'm')
-			->innerJoin('m', 'filecache', 'f',
-				$builder->expr()->andX(
-					$builder->expr()->eq('m.storage_id', 'f.storage'),
-					$builder->expr()->eq('f.path_hash', $builder->createNamedParameter(md5('files')))
-				))
 			->where($builder->expr()->eq('m.mount_point', $mountPoint))
 			->andWhere($builder->expr()->in('m.user_id', $builder->createNamedParameter($userIds, IQueryBuilder::PARAM_STR_ARRAY)));
 
@@ -470,10 +474,19 @@ class UserMountCache implements IUserMountCache {
 
 		$results = [];
 		while ($row = $result->fetch()) {
-			$results[$row['user_id']] = $row['size'];
+			$results[$row['user_id']] = $this->getSizeForHomeStorage($row['storage_id']);
 		}
 		$result->closeCursor();
 		return $results;
+	}
+
+	private function getSizeForHomeStorage(int $storage): int {
+		$query = $this->cacheDatabase->queryForStorageId($storage);
+		$query->select('size')
+			->from('filecache')
+			->where($query->expr()->eq('path_hash', $query->createNamedParameter(md5('files'))))
+			->andWhere($query->expr()->eq('storage', $query->createNamedParameter($storage, IQueryBuilder::PARAM_INT)));
+		return $query->executeQuery()->fetchOne();
 	}
 
 	public function clear(): void {

@@ -60,7 +60,7 @@ use OCP\Files\ReservedWordException;
 use OCP\Files\Storage\ILockingStorage;
 use OCP\Files\Storage\IStorage;
 use OCP\Files\Storage\IWriteStreamStorage;
-use OCP\Files\Storage\StorageNotAvailableException;
+use OCP\Files\StorageNotAvailableException;
 use OCP\ILogger;
 use OCP\Lock\ILockingProvider;
 use OCP\Lock\LockedException;

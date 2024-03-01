@@ -252,7 +252,7 @@ describe('Settings: Change personal information', { testIsolation: true }, () =>
 		cy.get('button[aria-label="Add additional email"]').should('be.disabled')
 
 		// fill the first additional
-		inputForLabel('Additional email address 1')
+		inputForLabel('Additional email 1')
 			.type('1@example.com')
 		handlePasswordConfirmation(user.password)
 		cy.wait('@submitSetting')
@@ -262,16 +262,16 @@ describe('Settings: Change personal information', { testIsolation: true }, () =>
 			.click()
 
 		// fill the second additional
-		inputForLabel('Additional email address 2')
+		inputForLabel('Additional email 2')
 			.type('2@example.com')
 		handlePasswordConfirmation(user.password)
 		cy.wait('@submitSetting')
 
 		// check the content is saved
 		cy.reload()
-		inputForLabel('Additional email address 1')
+		inputForLabel('Additional email 1')
 			.should('have.value', '1@example.com')
-		inputForLabel('Additional email address 2')
+		inputForLabel('Additional email 2')
 			.should('have.value', '2@example.com')
 
 		// delete the first
@@ -282,7 +282,7 @@ describe('Settings: Change personal information', { testIsolation: true }, () =>
 		handlePasswordConfirmation(user.password)
 
 		cy.reload()
-		inputForLabel('Additional email address 1')
+		inputForLabel('Additional email 1')
 			.should('have.value', '2@example.com')
 	})
 

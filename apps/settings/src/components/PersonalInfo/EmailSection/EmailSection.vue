@@ -2,6 +2,7 @@
 	- @copyright 2021, Christopher Ng <chrng8@gmail.com>
 	-
 	- @author Christopher Ng <chrng8@gmail.com>
+	- @author Grigorii K. Shartsev <me@shgk.me>
 	-
 	- @license GNU AGPL version 3 or any later version
 	-
@@ -21,7 +22,7 @@
 -->
 
 <template>
-	<section>
+	<section class="section-emails">
 		<HeaderBar :input-id="inputId"
 			:readable="primaryEmail.readable"
 			:is-editable="true"
@@ -47,16 +48,18 @@
 		<template v-if="additionalEmails.length">
 			<em class="additional-emails-label">{{ t('settings', 'Additional emails') }}</em>
 			<!-- TODO use unique key for additional email when uniqueness can be guaranteed, see https://github.com/nextcloud/server/issues/26866 -->
-			<Email v-for="(additionalEmail, index) in additionalEmails"
-				:key="additionalEmail.key"
-				:index="index"
-				:scope.sync="additionalEmail.scope"
-				:email.sync="additionalEmail.value"
-				:local-verification-state="parseInt(additionalEmail.locallyVerified, 10)"
-				:active-notification-email.sync="notificationEmail"
-				@update:email="onUpdateEmail"
-				@update:notification-email="onUpdateNotificationEmail"
-				@delete-additional-email="onDeleteAdditionalEmail(index)" />
+			<div class="additional-emails-list">
+				<Email v-for="(additionalEmail, index) in additionalEmails"
+					:key="additionalEmail.key"
+					:index="index"
+					:scope.sync="additionalEmail.scope"
+					:email.sync="additionalEmail.value"
+					:local-verification-state="parseInt(additionalEmail.locallyVerified, 10)"
+					:active-notification-email.sync="notificationEmail"
+					@update:email="onUpdateEmail"
+					@update:notification-email="onUpdateNotificationEmail"
+					@delete-additional-email="onDeleteAdditionalEmail(index)" />
+			</div>
 		</template>
 	</section>
 </template>
@@ -196,7 +199,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-section {
+.section-emails {
 	padding: 10px 10px;
 
 	.additional-emails-label {

@@ -24,20 +24,8 @@
 <template>
 	<div>
 		<div class="email" :class="{ 'email--additional': !primary }">
-			<NcTextField :id="inputIdWithDefault"
-				ref="email"
-				autocapitalize="none"
-				autocomplete="email"
-				:error="hasError || !!helperText"
-				:helper-text="helperText || isNotConfirmedHelperText"
-				:label="inputPlaceholder"
-				:placeholder="inputPlaceholder"
-				spellcheck="false"
-				:success="isSuccess"
-				type="email"
-				:value.sync="emailAddress" />
-
-			<div class="email__actions">
+			<div v-if="!primary" class="email__label-container">
+				<label :for="inputIdWithDefault">{{ inputPlaceholder }}</label>
 				<FederationControl v-if="!federationDisabled && !primary"
 					:readable="propertyReadable"
 					:additional="true"
@@ -46,26 +34,44 @@
 					:handle-additional-scope-change="saveAdditionalEmailScope"
 					:scope.sync="localScope"
 					@update:scope="onScopeChange" />
-				<NcActions :aria-label="actionsLabel">
-					<NcActionButton v-if="!primary || !isNotificationEmail"
-						close-after-click
-						:disabled="!isConfirmedAddress"
-						@click="setNotificationMail">
-						<template #icon>
-							<NcIconSvgWrapper v-if="isNotificationEmail" :path="mdiStar" />
-							<NcIconSvgWrapper v-else :path="mdiStarOutline" />
-						</template>
-						{{ setNotificationMailLabel }}
-					</NcActionButton>
-					<NcActionButton close-after-click
-						:disabled="deleteDisabled"
-						@click="deleteEmail">
-						<template #icon>
-							<NcIconSvgWrapper :path="mdiTrashCan" />
-						</template>
-						{{ deleteEmailLabel }}
-					</NcActionButton>
-				</NcActions>
+			</div>
+			<div class="email__input-container">
+				<NcTextField :id="inputIdWithDefault"
+					ref="email"
+					class="email__input"
+					autocapitalize="none"
+					autocomplete="email"
+					:error="hasError || !!helperText"
+					:helper-text="helperTextWithNonConfirmed"
+					label-outside
+					:placeholder="inputPlaceholder"
+					spellcheck="false"
+					:success="isSuccess"
+					type="email"
+					:value.sync="emailAddress" />
+
+				<div class="email__actions">
+					<NcActions :aria-label="actionsLabel">
+						<NcActionButton v-if="!primary || !isNotificationEmail"
+							close-after-click
+							:disabled="!isConfirmedAddress"
+							@click="setNotificationMail">
+							<template #icon>
+								<NcIconSvgWrapper v-if="isNotificationEmail" :path="mdiStar" />
+								<NcIconSvgWrapper v-else :path="mdiStarOutline" />
+							</template>
+							{{ setNotificationMailLabel }}
+						</NcActionButton>
+						<NcActionButton close-after-click
+							:disabled="deleteDisabled"
+							@click="deleteEmail">
+							<template #icon>
+								<NcIconSvgWrapper :path="mdiTrashCan" />
+							</template>
+							{{ deleteEmailLabel }}
+						</NcActionButton>
+					</NcActions>
+				</div>
 			</div>
 		</div>
 
@@ -203,6 +209,13 @@ export default {
 			return ''
 		},
 
+		helperTextWithNonConfirmed() {
+			if (this.helperText || this.hasError || this.isSuccess) {
+				return this.helperText || ''
+			}
+			return this.isNotConfirmedHelperText
+		},
+
 		setNotificationMailLabel() {
 			if (this.isNotificationEmail) {
 				return t('settings', 'Unset as primary email')
@@ -220,7 +233,7 @@ export default {
 
 		inputPlaceholder() {
 			// Primary email has implicit linked <label>
-			return !this.primary ? t('settings', 'Additional email {index}', { index: this.index + 1 }) : undefined
+			return !this.primary ? t('settings', 'Additional email address {index}', { index: this.index + 1 }) : undefined
 		},
 
 		isNotificationEmail() {
@@ -249,7 +262,8 @@ export default {
 
 	methods: {
 		debounceEmailChange: debounce(async function(email) {
-			this.helperText = this.$refs.email?.$refs.input?.validationMessage || null
+			// TODO: provide method to get native input in NcTextField
+			this.helperText = this.$refs.email.$refs.inputField.$refs.input.validationMessage || null
 			if (this.helperText !== null) {
 				return
 			}
@@ -393,20 +407,35 @@ export default {
 
 <style lang="scss" scoped>
 .email {
-	display: flex;
-	flex-direction: row;
-	align-items: start;
-	gap: var(--default-grid-baseline);
+	&__label-container {
+		height: var(--default-clickable-area);
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: calc(var(--default-grid-baseline) * 2);
+	}
 
-	&--additional {
-		margin-top: calc(var(--default-grid-baseline) * 4);
+	&__input-container {
+		position: relative;
+	}
+
+	&__input {
+		margin-block-start: 0 !important;
+
+		// TODO: provide a way to hide status icon or combine it with trailing button in NcInputField
+		:deep(.input-field__icon--trailing) {
+			display: none;
+		}
 	}
 
 	&__actions {
-		display: flex;
-		gap: 0 var(--default-grid-baseline);
-		// Same as margin-top of the NcInputField
-		margin-top: 6px;
+		position: absolute;
+		inset-block-start: 0;
+		inset-inline-end: 0;
+	}
+
+	&--additional {
+		margin-top: calc(var(--default-grid-baseline) * 2);
 	}
 }
 </style>

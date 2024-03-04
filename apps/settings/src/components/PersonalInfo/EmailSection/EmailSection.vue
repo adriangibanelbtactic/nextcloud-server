@@ -46,7 +46,7 @@
 		</span>
 
 		<template v-if="additionalEmails.length">
-			<em class="additional-emails-label">{{ t('settings', 'Additional emails') }}</em>
+			<!-- <em class="additional-emails-label">{{ t('settings', 'Additional emails') }}</em> -->
 			<!-- TODO use unique key for additional email when uniqueness can be guaranteed, see https://github.com/nextcloud/server/issues/26866 -->
 			<div class="additional-emails-list">
 				<Email v-for="(additionalEmail, index) in additionalEmails"

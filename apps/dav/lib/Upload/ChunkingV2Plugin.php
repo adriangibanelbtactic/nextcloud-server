@@ -55,6 +55,7 @@ use Sabre\DAV\ServerPlugin;
 use Sabre\HTTP\RequestInterface;
 use Sabre\HTTP\ResponseInterface;
 use Sabre\Uri;
+use function OCP\Log\logger;
 
 class ChunkingV2Plugin extends ServerPlugin {
 	/** @var Server */
@@ -344,6 +345,11 @@ class ChunkingV2Plugin extends ServerPlugin {
 
 		// If the file was not uploaded to the user storage directly we need to copy/move it
 		try {
+			logger('s3_debug')->error('Checking if we need to copy file after multipart upload', [
+				'uploadFilePath' => $uploadFile->getFileInfo()->getPath(),
+				'pathFromView' => Filesystem::getRoot() . $uploadFile->getPath(),
+				'targetAbsolutePath' => $targetAbsolutePath,
+			]);
 			$uploadFileAbsolutePath = $uploadFile->getFileInfo()->getPath();
 			if ($uploadFileAbsolutePath !== $targetAbsolutePath) {
 				$uploadFile = $rootFolder->get($uploadFile->getFileInfo()->getPath());

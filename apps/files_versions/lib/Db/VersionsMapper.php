@@ -27,6 +27,7 @@ declare(strict_types=1);
 namespace OCA\Files_Versions\Db;
 
 use OCP\AppFramework\Db\QBMapper;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
 /**
@@ -82,5 +83,31 @@ class VersionsMapper extends QBMapper {
 		return $qb->delete($this->getTableName())
 			 ->where($qb->expr()->eq('file_id', $qb->createNamedParameter($fileId)))
 			 ->executeStatement();
+	}
+
+	public function deleteAllVersionsForUser(int $storageId, string $path = null): void {
+		$filesIdsSelect = $this->db->getQueryBuilder();
+		$filesIdsSelect->select('fileid')
+			->from('filecache')
+			->where($filesIdsSelect->expr()->eq('storage', $filesIdsSelect->createNamedParameter($storageId, IQueryBuilder::PARAM_STR)))
+			->andWhere($filesIdsSelect->expr()->like('path', $filesIdsSelect->createNamedParameter('files' . ($path ? '/' . $this->db->escapeLikeParameter($path) : '') . '/%', IQueryBuilder::PARAM_STR)))
+			->setFirstResult(0)
+			->setMaxResults(1000);
+
+		$versionEntitiesDeleteQuery = $this->db->getQueryBuilder();
+		$versionEntitiesDeleteQuery->delete($this->getTableName())
+			->where($versionEntitiesDeleteQuery->expr()->in('file_id', $versionEntitiesDeleteQuery->createParameter('file_ids')));
+
+		$offset = 0;
+		do {
+			$filesIdsSelect->setFirstResult($offset);
+			$result = $filesIdsSelect->executeQuery();
+			$count = $result->rowCount();
+			$rows = $result->fetchAll();
+			$offset += $count;
+
+			$versionEntitiesDeleteQuery->setParameter('file_ids', array_map(fn ($row) => $row['fileid'], $rows), IQueryBuilder::PARAM_INT_ARRAY);
+			$versionEntitiesDeleteQuery->executeStatement();
+		} while ($result->rowCount() !== 0);
 	}
 }

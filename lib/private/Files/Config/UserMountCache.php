@@ -28,6 +28,7 @@
  */
 namespace OC\Files\Config;
 
+use OC\DB\Exceptions\DbalException;
 use OCP\Cache\CappedMemoryCache;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Diagnostics\IEventLogger;
@@ -172,14 +173,21 @@ class UserMountCache implements IUserMountCache {
 
 	private function addToCache(ICachedMountInfo $mount) {
 		if ($mount->getStorageId() !== -1) {
-			$this->connection->insertIfNotExist('*PREFIX*mounts', [
-				'storage_id' => $mount->getStorageId(),
-				'root_id' => $mount->getRootId(),
-				'user_id' => $mount->getUser()->getUID(),
-				'mount_point' => $mount->getMountPoint(),
-				'mount_id' => $mount->getMountId(),
-				'mount_provider_class' => $mount->getMountProvider(),
-			], ['root_id', 'user_id', 'mount_point']);
+			$query = $this->connection->getQueryBuilder();
+			$query->insert('mounts')
+				->values([
+					'storage_id' => $query->createNamedParameter($mount->getStorageId(), IQueryBuilder::PARAM_INT),
+					'root_id' => $query->createNamedParameter($mount->getRootId(), IQueryBuilder::PARAM_INT),
+					'user_id' => $query->createNamedParameter($mount->getUser()->getUID()),
+					'mount_point' => $query->createNamedParameter($mount->getMountPoint()),
+					'mount_id' => $query->createNamedParameter($mount->getMountId(), IQueryBuilder::PARAM_INT),
+					'mount_provider_class' => $query->createNamedParameter($mount->getMountProvider()),
+				]);
+			try {
+				$query->executeStatement();
+			} catch (DbalException $e) {
+				// ignore duplicate
+			}
 		} else {
 			// in some cases this is legitimate, like orphaned shares
 			$this->logger->debug('Could not get storage info for mount at ' . $mount->getMountPoint());

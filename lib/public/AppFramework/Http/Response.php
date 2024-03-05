@@ -270,6 +270,10 @@ class Response {
 			$mergeWith['ETag'] = '"' . $this->ETag . '"';
 		}
 
+		if (!(isset($this->headers))) {
+				$this->headers = [];
+		}
+
 		return array_merge($mergeWith, $this->headers);
 	}
 
